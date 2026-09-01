@@ -145,7 +145,7 @@ module "eks" {
   node_groups = {
     bootstrap = {
       name           = "bootstrap-nodes"
-      instance_types = ["c7i-flex.large"]
+      instance_types = ["t3.micro"]
       min_size       = 2
       max_size       = 3
       desired_size   = 2
