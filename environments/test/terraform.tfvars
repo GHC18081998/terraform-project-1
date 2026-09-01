@@ -7,7 +7,7 @@ aws_region   = "us-east-1"
 project_name = "myproject"
 environment  = "test"
 owner        = "aws-devops-team"
-account_id   = "463200133372"
+account_id   = "390034075362"
 
 # --------------------------------------------------------------
 # EXACTLY 1 VPC
@@ -72,7 +72,7 @@ interface_endpoint_services = [
 cluster_name           = "test-eks-cluster"
 cluster_version        = "1.31"
 kms_key_administrators = [
-  "arn:aws:iam::463200133372:role/AdminRole",
+  "arn:aws:iam::390034075362:role/AdminRole",
 ]
 
 # Karpenter NodePools configuration
@@ -100,7 +100,7 @@ node_pools = {
 
 aws_auth_roles = [
   {
-    rolearn  = "arn:aws:iam::463200133372:role/LabRole"
+    rolearn  = "arn:aws:iam::390034075362:role/LabRole"
     username = "console-admin"
     groups   = ["system:masters"]
   }
