@@ -26,7 +26,7 @@ variable "account_id" {
 }
 
 # ============================================================
-# EKS & Karpenter Configurations (ADDED)
+# EKS & Karpenter Configurations
 # ============================================================
 variable "cluster_name" {
   description = "Name of the EKS cluster"
@@ -72,7 +72,7 @@ variable "aws_auth_users" {
 }
 
 # ============================================================
-# DNS (Route53) Configurations (ADDED)
+# DNS (Route53) Configurations
 # ============================================================
 variable "route53_zone_id" {
   description = "Route53 Hosted Zone ID"
@@ -90,7 +90,7 @@ variable "route53_zone_name" {
 # VPC Configurations
 # ============================================================
 variable "vpc_configs" {
-  description = "VPC configurations for this environment. Add more VPCs by adding entries."
+  description = "VPC configurations for this environment."
   type = map(object({
     cidr_block           = string
     enable_dns_hostnames = optional(bool, true)
@@ -133,10 +133,10 @@ variable "nat_gateway_configs" {
 variable "public_route_table_configs" {
   description = "Public route table configurations"
   type = map(object({
-    vpc_key                     = string
-    igw_key                     = string
+    vpc_key                   = string
+    igw_key                   = string
     associated_public_subnets = list(string)
-    tags                        = optional(map(string), {})
+    tags                      = optional(map(string), {})
   }))
 }
 
@@ -177,9 +177,9 @@ variable "enable_dynamodb_endpoint" {
 variable "s3_buckets" {
   description = "Map of bucket configurations"
   type = map(object({
-    versioning_enabled                   = optional(bool, true)
-    lifecycle_enabled                    = optional(bool, true)
-    intelligent_tiering_enabled          = optional(bool, true)
+    versioning_enabled                 = optional(bool, true)
+    lifecycle_enabled                  = optional(bool, true)
+    intelligent_tiering_enabled        = optional(bool, true)
     noncurrent_version_expiration_days = optional(number, 30)
     expiration_days                    = optional(number)
     transitions = optional(list(object({
@@ -201,7 +201,7 @@ variable "secrets" {
   description = "Map of secret configurations"
   type = map(object({
     description          = string
-    secret_string        = string
+    username             = string
     resource_policy_json = optional(string)
     rotation_lambda_arn  = optional(string)
     rotation_days        = optional(number, 30)
@@ -213,39 +213,33 @@ variable "secrets" {
 # IAM Configurations
 # ============================================================
 variable "iam_roles" {
-  description = "Map of IAM roles to create"
-  type        = map(any)
-  default     = {}
+  type    = map(any)
+  default = {}
 }
 
 variable "iam_policies" {
-  description = "Map of custom IAM policies to create"
-  type        = map(any)
-  default     = {}
+  type    = map(any)
+  default = {}
 }
 
 variable "iam_role_policy_attachments" {
-  description = "Map of role policy attachments"
-  type        = map(any)
-  default     = {}
+  type    = map(any)
+  default = {}
 }
 
 variable "iam_oidc_providers" {
-  description = "Map of OIDC identity providers"
-  type        = map(any)
-  default     = {}
+  type    = map(any)
+  default = {}
 }
 
 variable "iam_oidc_roles" {
-  description = "Map of OIDC-assumed roles"
-  type        = map(any)
-  default     = {}
+  type    = map(any)
+  default = {}
 }
 
 variable "iam_oidc_role_policy_attachments" {
-  description = "Map of OIDC role policy attachments"
-  type        = map(any)
-  default     = {}
+  type    = map(any)
+  default = {}
 }
 
 # ============================================================
@@ -259,13 +253,11 @@ variable "repositories" {
     tagged_image_max_count     = number
     tagged_prefixes            = list(string)
   }))
-  description = "Map of ECR repositories to create and their specific lifecycle/scanning parameters"
 }
 
 variable "extra_tags" {
-  type        = map(string)
-  default     = {}
-  description = "Additional tags to append to all repositories"
+  type    = map(string)
+  default = {}
 }
 
 # ============================================================
@@ -281,13 +273,6 @@ variable "db_username" {
   description = "Master username for the database"
   type        = string
   sensitive   = true
-}
-
-variable "db_password" {
-  description = "Master password (leave empty to auto-generate)"
-  type        = string
-  sensitive   = true
-  default     = ""
 }
 
 variable "engine" {
@@ -385,7 +370,6 @@ variable "eks_addons" {
 # DynamoDB Configurations
 # ============================================================
 variable "dynamodb_tables" {
-  description = "Map of DynamoDB tables to create in this environment"
   type = map(object({
     hash_key       = string
     range_key      = optional(string)
@@ -412,41 +396,294 @@ variable "dynamodb_tables" {
 # ==============================================================================
 
 variable "enable_aws_load_balancer_controller" {
-  description = "Feature toggle to enable or disable the AWS Load Balancer Controller"
-  type        = bool
-  default     = true
+  type    = bool
+  default = true
 }
 
 variable "lb_controller_replica_count" {
-  description = "Number of replicas for the LB Controller pods"
-  type        = number
-  default     = 1
+  type    = number
+  default = 1
 }
 
 variable "lb_controller_chart_version" {
-  description = "Helm chart version for the AWS Load Balancer Controller"
-  type        = string
-  default     = "1.7.1"
+  type    = string
+  default = "1.7.1"
 }
 
-# ------------------------------------------------------------------------------
-# WAF & Shield Integration Toggles
-# ------------------------------------------------------------------------------
-
 variable "enable_waf" {
-  description = "Enable WAF classic integration for ALBs"
-  type        = bool
-  default     = false
+  type    = bool
+  default = false
 }
 
 variable "enable_wafv2" {
-  description = "Enable WAFv2 integration for ALBs"
-  type        = bool
-  default     = false
+  type    = bool
+  default = false
 }
 
 variable "enable_shield" {
-  description = "Enable AWS Shield Advanced integration"
+  type    = bool
+  default = false
+}
+
+# ==============================================================================
+# Application Ports & Storage Configurations
+# ==============================================================================
+
+variable "lb_port" {
+  description = "Application Load Balancer listener port"
+  type        = number
+}
+
+variable "jenkins_port" {
+  description = "Jenkins application port"
+  type        = number
+}
+
+variable "nexus_port" {
+  description = "Nexus application port"
+  type        = number
+}
+
+variable "sonar_port" {
+  description = "SonarQube application port"
+  type        = number
+}
+
+variable "postgres_port" {
+  description = "PostgreSQL database port"
+  type        = number
+}
+
+variable "jenkins_ebs_size" {
+  description = "Size of the Jenkins EBS data volume in GB"
+  type        = number
+}
+
+variable "jenkins_ebs_type" {
+  description = "Type of the Jenkins EBS data volume (e.g., gp3)"
+  type        = string
+}
+
+variable "sonarqube_ebs_size" {
+  description = "Size of the SonarQube EBS data volume in GB"
+  type        = number
+}
+
+variable "sonarqube_ebs_type" {
+  description = "Type of the SonarQube EBS data volume (e.g., gp3)"
+  type        = string
+}
+
+# ==============================================================================
+# Tools Server Configurations (Versions, Instances & AMIs)
+# ==============================================================================
+
+variable "jenkins_instance_type" {
+  description = "EC2 Instance type for Jenkins"
+  type        = string
+}
+
+variable "jenkins_java_version" {
+  description = "Java version for Jenkins"
+  type        = string
+}
+
+variable "jenkins_ami_filter" {
+  description = "AMI name filter for Jenkins (e.g., al2023-ami-2023.*-x86_64)"
+  type        = string
+}
+
+variable "jenkins_ami_architecture" {
+  description = "AMI architecture for Jenkins"
+  type        = string
+}
+
+variable "nexus_instance_type" {
+  description = "EC2 Instance type for Nexus"
+  type        = string
+}
+
+variable "nexus_version" {
+  description = "The specific version of Nexus Repository Manager to deploy"
+  type        = string
+}
+
+variable "nexus_java_package" {
+  description = "The Java package name required to run Nexus"
+  type        = string
+}
+
+variable "nexus_ami_filter" {
+  description = "AMI name filter for Nexus"
+  type        = string
+}
+
+variable "nexus_ami_architecture" {
+  description = "AMI architecture for Nexus"
+  type        = string
+}
+
+variable "sonarqube_instance_type" {
+  description = "EC2 Instance type for SonarQube"
+  type        = string
+}
+
+variable "sonarqube_version" {
+  description = "The specific version of SonarQube to deploy"
+  type        = string
+}
+
+variable "sonarqube_java_version" {
+  description = "Java version for SonarQube"
+  type        = string
+}
+
+variable "sonarqube_postgres_version" {
+  description = "PostgreSQL Docker image version for SonarQube (e.g., 15)"
+  type        = string
+}
+
+variable "sonarqube_ami_filter" {
+  description = "AMI name filter for SonarQube"
+  type        = string
+}
+
+variable "sonarqube_ami_architecture" {
+  description = "AMI architecture for SonarQube"
+  type        = string
+}
+
+variable "sonarqube_docker_image" {
+  description = "Docker image tag for SonarQube"
+  type        = string
+}
+
+variable "sonar_host_port" {
+  description = "Host port for SonarQube container"
+  type        = number
+}
+
+variable "sonar_container_port" {
+  description = "Container port for SonarQube"
+  type        = number
+}
+
+variable "sonar_container_name" {
+  description = "Name of the SonarQube container"
+  type        = string
+}
+
+variable "docker_repo_url" {
+  description = "Docker repository URL for yum/dnf"
+  type        = string
+}
+
+variable "docker_package" {
+  description = "Docker package name to install"
+  type        = string
+}
+
+variable "sonarqube_db_username" {
+  description = "Database username for SonarQube"
+  type        = string
+}
+
+variable "sonar_password_length" {
+  description = "Length of the SonarQube database password"
+  type        = number
+}
+
+variable "sonar_password_special" {
+  description = "Whether to include special characters in the password"
   type        = bool
-  default     = false
+}
+
+variable "sonar_password_override_special" {
+  description = "Supplied special characters allowed in the password"
+  type        = string
+}
+
+# ==============================================================================
+# Shared Access Toggles & Health Checks
+# ==============================================================================
+variable "shared_is_internal_alb" {
+  description = "Boolean to determine if ALBs are internal or internet-facing"
+  type        = bool
+}
+
+variable "shared_is_ebs_encrypted" {
+  description = "Boolean to determine if Jenkins EBS volume is encrypted"
+  type        = bool
+}
+
+variable "jenkins_hc_path" {
+  description = "Health check path for Jenkins Target Group"
+  type        = string
+}
+
+variable "nexus_hc_path" {
+  description = "Health check path for Nexus Target Group"
+  type        = string
+}
+
+variable "sonar_hc_path" {
+  description = "Health check path for SonarQube Target Group"
+  type        = string
+}
+
+variable "sonar_hc_matcher" {
+  description = "Success code for SonarQube health check (e.g., \"200\")"
+  type        = string
+}
+
+variable "sonarqube_data_ebs_size" {
+  type = number
+}
+
+variable "sonarqube_data_ebs_type" {
+  type = string
+}
+
+variable "sonarqube_data_encrypted" {
+  type = bool
+}
+
+variable "sonarqube_data_device_name" {
+  type = string
+}
+
+
+variable "postgres_volume_size" {
+  type        = number
+  description = "Size of the dedicated PostgreSQL EBS volume in GB"
+}
+
+variable "postgres_volume_type" {
+  type        = string
+  description = "EBS volume type for PostgreSQL data"
+}
+
+variable "postgres_volume_encrypted" {
+  type        = bool
+  description = "Enable encryption on the PostgreSQL EBS volume"
+}
+
+variable "postgres_device_name" {
+  type        = string
+  description = "Device name for attaching the PostgreSQL EBS volume"
+}
+
+variable "sonarqube_ebs_encrypted" {
+  type        = bool
+  description = "Enable encryption on SonarQube root EBS volume"
+}
+
+variable "sonarqube_ebs_delete_on_termination" {
+  type        = bool
+  description = "Whether to delete the root EBS volume on instance termination"
+}
+
+variable "secret_recovery_window_in_days" {
+  type        = number
+  description = "Recovery window in days for Secrets Manager secrets"
 }

@@ -1,50 +1,4 @@
 # ==============================================================================
-# Random Password Generation
-# ==============================================================================
-
-resource "random_password" "db_password" {
-  count = var.db_password == "" ? 1 : 0
-
-  length           = 16
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-  min_upper        = 2
-  min_lower        = 2
-  min_numeric      = 2
-  min_special      = 2
-}
-
-# ==============================================================================
-# Store Password in AWS Secrets Manager
-# ==============================================================================
-
-resource "aws_secretsmanager_secret" "db_password" {
-  name                    = "${local.db_identifier}-db-password"
-  description             = "Master password for RDS instance ${local.db_identifier}"
-  kms_key_id              = local.kms_key_id
-  recovery_window_in_days = 0
-
-  tags = merge(local.common_tags, {
-    Name    = "${local.db_identifier}-db-password"
-    Purpose = "RDS Master Password"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "db_password" {
-  secret_id = aws_secretsmanager_secret.db_password.id
-  secret_string = jsonencode({
-    username = var.db_username
-    password = var.db_password != "" ? var.db_password : random_password.db_password[0].result
-    host     = aws_db_instance.rds.address
-    port     = aws_db_instance.rds.port
-    dbname   = var.db_name
-    engine   = var.engine
-  })
-
-  depends_on = [aws_db_instance.rds]
-}
-
-# ==============================================================================
 # RDS Instance
 # ==============================================================================
 
@@ -65,9 +19,12 @@ resource "aws_db_instance" "rds" {
   iops                  = contains(["io1", "io2"], var.storage_type) ? var.iops : null
   storage_throughput    = var.storage_type == "gp3" ? var.storage_throughput : null
 
-  # Authentication
-  username = var.db_username
-  password = var.db_password != "" ? var.db_password : random_password.db_password[0].result
+  # -------------------------------------------------------------
+  # Authentication (Native AWS Secrets Manager Integration)
+  # -------------------------------------------------------------
+  username                      = var.db_username
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = local.kms_key_id
 
   # Network Configuration
   db_subnet_group_name   = aws_db_subnet_group.rds.name
@@ -97,9 +54,7 @@ resource "aws_db_instance" "rds" {
   monitoring_role_arn                   = local.monitoring_role_arn
   performance_insights_enabled          = var.performance_insights_enabled
   performance_insights_kms_key_id       = var.performance_insights_enabled ? local.kms_key_id : null
-  performance_insights_retention_period = var.performance_insights_enabled ? (
-    var.performance_insights_retention_period
-  ) : null
+  performance_insights_retention_period = var.performance_insights_enabled ? var.performance_insights_retention_period : null
   enabled_cloudwatch_logs_exports       = local.resolved_log_exports
 
   # Upgrade Configuration
@@ -121,10 +76,7 @@ resource "aws_db_instance" "rds" {
     aws_db_parameter_group.rds,
     aws_iam_role_policy_attachment.rds_monitoring
   ]
-
-  lifecycle {
-    ignore_changes = [
-      password
-    ]
-  }
+  
+  # Note: The lifecycle { ignore_changes = [password] } block is removed 
+  # because Terraform is no longer managing the password argument.
 }

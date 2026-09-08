@@ -26,6 +26,13 @@ output "policy_arns" {
   }
 }
 
+output "instance_profile_names" {
+  description = "Map of IAM instance profile keys to their corresponding names"
+  value = {
+    for k, v in aws_iam_instance_profile.profiles : k => v.name
+  }
+}
+
 # ==============================================================
 # OIDC Federation Outputs
 # ==============================================================

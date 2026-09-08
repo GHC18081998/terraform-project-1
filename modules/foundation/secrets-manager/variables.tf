@@ -24,6 +24,7 @@ variable "owner" {
 variable "kms_key_arn" {
   description = "KMS key ARN used to encrypt secrets"
   type        = string
+  default     = null
 }
 
 variable "recovery_window_in_days" {
@@ -36,7 +37,7 @@ variable "secrets" {
   description = "Map of secret_key => secret configuration"
   type = map(object({
     description          = string
-    secret_string        = string
+    secret_string = optional(string)
     resource_policy_json = optional(string)
     rotation_lambda_arn  = optional(string)
     rotation_days        = optional(number, 30)

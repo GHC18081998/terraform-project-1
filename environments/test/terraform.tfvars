@@ -1,5 +1,5 @@
 # ==============================================================
-# TEST Environment Configuration
+# TEST Environment Configuration (Single-Region: us-east-1)
 # ==============================================================
 # Location: environments/test/terraform.tfvars
 
@@ -10,20 +10,27 @@ owner        = "aws-devops-team"
 account_id   = "390034075362"
 
 # --------------------------------------------------------------
-# EXACTLY 1 VPC
+# EXACTLY 1 VPC (Main Region - us-east-1)
 # --------------------------------------------------------------
 vpc_configs = {
-  "main-vpc" = { cidr_block = "10.0.0.0/16", enable_dns_hostnames = true, enable_dns_support = true }
+  "main-vpc" = {
+    cidr_block           = "10.0.0.0/16"
+    enable_dns_hostnames = true
+    enable_dns_support   = true
+  }
 }
 
 # --------------------------------------------------------------
-# MINIMAL SUBNETS (2 Public, 2 Private for AWS EKS/RDS rules)
+# PUBLIC SUBNETS (Across 2 AZs)
 # --------------------------------------------------------------
 public_subnet_configs = {
   "main-pub-1a" = { vpc_key = "main-vpc", cidr_block = "10.0.1.0/24", availability_zone = "us-east-1a", map_public_ip = true }
   "main-pub-1b" = { vpc_key = "main-vpc", cidr_block = "10.0.2.0/24", availability_zone = "us-east-1b", map_public_ip = true }
 }
 
+# --------------------------------------------------------------
+# PRIVATE SUBNETS (Across 2 AZs)
+# --------------------------------------------------------------
 private_subnet_configs = {
   "main-priv-1a" = { vpc_key = "main-vpc", cidr_block = "10.0.10.0/24", availability_zone = "us-east-1a", subnet_type = "app" }
   "main-priv-1b" = { vpc_key = "main-vpc", cidr_block = "10.0.11.0/24", availability_zone = "us-east-1b", subnet_type = "app" }
@@ -37,7 +44,7 @@ nat_gateway_configs = {
 }
 
 # --------------------------------------------------------------
-# ROUTE TABLES
+# ROUTE TABLES (1 Public, 1 Private)
 # --------------------------------------------------------------
 public_route_table_configs = {
   "main-pub-rt" = {
@@ -97,7 +104,6 @@ node_pools = {
 # --------------------------------------------------------------
 # EKS Cluster Authentication
 # ------------------------------------------------------------
-
 aws_auth_roles = [
   {
     rolearn  = "arn:aws:iam::390034075362:role/LabRole"
@@ -105,33 +111,23 @@ aws_auth_roles = [
     groups   = ["system:masters"]
   }
 ]
-
 aws_auth_users = []
 
 # --------------------------------------------------------------
 # S3 Buckets Configuration
 # --------------------------------------------------------------
 s3_buckets = {
-  # 1. Your Original Terraform State Bucket
   "myproject-terraform-state-locking-bucket" = {
     versioning_enabled = true
-    # Note: We do not put expiration days or tiering on the state bucket
-    # to ensure your state files are never accidentally moved or deleted.
   }
-
-  # 2. Application Logs
   "app-logs" = {
     versioning_enabled = false
     expiration_days    = 120
   }
-
-  # 3. User Uploads
   "app-user-uploads" = {
-    versioning_enabled          = true
+    versioning_enabled            = true
     intelligent_tiering_enabled = true
   }
-
-  # 4. Database Backups
   "app-db-backups" = {
     versioning_enabled = true
     expiration_days    = 365
@@ -141,20 +137,20 @@ s3_buckets = {
 # --------------------------------------------------------------
 # Secrets Manager Configuration
 # --------------------------------------------------------------
-secrets = {
-  "database-credentials-v2" = {
-    description   = "Primary database credentials"
-    secret_string = "{\"username\":\"dbadmin\",\"password\":\"changeme\"}"
-  }
-}
+#secrets = {
+#  "sonarqube-db-credentials" = {
+#    description = "SonarQube PostgreSQL credentials"
+#    username    = "sonaradmin"
+#  }
+#}
 
 # --------------------------------------------------------------
 # IAM Roles & Custom Policies
 # --------------------------------------------------------------
 iam_roles = {
   "ec2-app-role" = {
-    description           = "Role for EC2 application servers"
-    principal_type        = "Service"
+    description             = "Role for EC2 application servers"
+    principal_type          = "Service"
     principal_identifiers = ["ec2.amazonaws.com"]
   }
 }
@@ -235,11 +231,32 @@ iam_policies = {
     }
     EOF
   }
+
+  "secrets-read-policy" = {
+    description = "Allows EC2 to read Secrets Manager and use KMS keys"
+    policy_json = <<-EOF
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:GetSecretValue",
+            "kms:Decrypt"
+          ],
+          "Resource": "*"
+        }
+      ]
+    }
+    EOF
+  }
 }
 
 iam_role_policy_attachments = {
   "ec2_s3_attach"       = { role_key = "ec2-app-role", policy_key = "s3-full-access" }
   "ec2_dynamodb_attach" = { role_key = "ec2-app-role", policy_key = "dynamodb-full-access" }
+  "ec2_ssm_core_attach" = { role_key = "ec2-app-role", policy_key = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" }
+  "ec2_secrets_attach"  = { role_key = "ec2-app-role", policy_key = "secrets-read-policy" }
 }
 
 # --------------------------------------------------------------
@@ -340,7 +357,6 @@ repositories = {
 # --------------------------------------------------------------
 db_name     = "appdb2"
 db_username = "dbadmin"
-db_password = "dbpassword123"
 
 engine         = "mysql"
 engine_version = "8.0"
@@ -366,7 +382,6 @@ db_parameters = [
     value        = "100"
     apply_method = "pending-reboot"
   },
-  # Replace log_duration with these if you want to log slow queries in MySQL:
   {
     name         = "slow_query_log"
     value        = "1"
@@ -374,17 +389,21 @@ db_parameters = [
   },
   {
     name         = "long_query_time"
-    value        = "2" # Logs queries taking longer than 2 seconds
+    value        = "2"
     apply_method = "immediate"
   }
 ]
+
+# --------------------------------------------------------------
+# 2. SonarQube Local PostgreSQL Container Username
+# --------------------------------------------------------------
+sonarqube_db_username = "sonar_admin"
 
 # --------------------------------------------------------------
 # DNS Configuration
 # --------------------------------------------------------------
 route53_zone_id   = "Z1234567890ABCDEFGHIJ"
 route53_zone_name = "test.example.com"
-
 
 # --------------------------------------------------------------
 # Global Extra Tags
@@ -421,17 +440,91 @@ kms_key_arn = ""
 # ==============================================================
 # AWS Load Balancer Controller Configuration
 # ==============================================================
-
-# Enable the controller
 enable_aws_load_balancer_controller = true
-
-# Cost optimization for TEST: Only run 1 replica instead of 2
 lb_controller_replica_count         = 1
-
-# Lock the Helm chart version to ensure stability
 lb_controller_chart_version         = "1.7.1"
-
-# Feature toggles for ALB protections (Disabled in Test to save money)
 enable_waf                          = false
 enable_wafv2                        = false
 enable_shield                       = false
+
+# ==============================================================
+# Application Ports & Storage Configuration (Single-Region)
+# ==============================================================
+lb_port       = 80
+jenkins_port  = 8080
+nexus_port    = 8081
+sonar_port    = 9000
+postgres_port = 5432
+
+jenkins_ebs_size   = 30
+jenkins_ebs_type   = "gp3"
+
+sonarqube_ebs_size = 30
+sonarqube_ebs_type = "gp3"
+
+# --------------------------------------------------------------
+# Server Configs (Instance Types, Java, & Application Versions)
+# --------------------------------------------------------------
+jenkins_instance_type    = "t3.medium"
+jenkins_java_version     = "21"
+jenkins_ami_filter       = "al2023-ami-2023.*-x86_64"
+jenkins_ami_architecture = "x86_64"
+
+nexus_instance_type    = "t3.medium"
+nexus_version          = "3.78.2-04"
+nexus_java_package     = "java-21-amazon-corretto-devel"
+nexus_ami_filter       = "al2023-ami-2023.*-x86_64"
+nexus_ami_architecture = "x86_64"
+
+sonarqube_instance_type    = "t3.medium"
+sonarqube_version          = "lts-community"
+sonarqube_java_version     = "java-17-amazon-corretto-devel"
+sonarqube_postgres_version = "15"
+
+sonarqube_docker_image     = "sonarqube:lts-community"
+sonar_host_port            = 9000
+sonar_container_port       = 9000
+sonar_container_name       = "sonar"
+docker_repo_url            = "https://download.docker.com/linux/centos/docker-ce.repo"
+docker_package             = "docker"
+sonarqube_ami_filter       = "al2023-ami-2023.*-x86_64"
+sonarqube_ami_architecture = "x86_64"
+
+sonarqube_data_ebs_size  = 30
+sonarqube_data_ebs_type  = "gp3"
+sonarqube_data_encrypted = true
+sonarqube_data_device_name = "/dev/sdg"
+
+# --------------------------------------------------------------
+# Dedicated EBS Volume for PostgreSQL (EC2 Local Data Mount)
+# --------------------------------------------------------------
+postgres_volume_size      = 40
+postgres_volume_type      = "gp3"
+postgres_volume_encrypted = true
+postgres_device_name      = "/dev/sdf"
+
+# --------------------------------------------------------------
+# SonarQube & Storage Security Settings
+# --------------------------------------------------------------
+sonarqube_ebs_encrypted             = true
+sonarqube_ebs_delete_on_termination = false
+secret_recovery_window_in_days      = 0
+
+
+
+# --------------------------------------------------------------
+# SonarQube Password Generation Configurations
+# --------------------------------------------------------------
+sonar_password_length           = 16
+sonar_password_special          = false
+sonar_password_override_special = "!#$%&*()-_=+[]{}<>:?"
+
+# --------------------------------------------------------------
+# Shared Access Configurations
+# --------------------------------------------------------------
+shared_is_internal_alb  = false
+shared_is_ebs_encrypted = true
+jenkins_hc_path         = "/login"
+nexus_hc_path           = "/"
+sonar_hc_path           = "/api/system/status"
+sonar_hc_matcher        = "200"

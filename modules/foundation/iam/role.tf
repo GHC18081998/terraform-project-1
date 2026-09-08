@@ -13,3 +13,17 @@ resource "aws_iam_role" "roles" {
     Name = "${local.name_prefix}-${each.key}-role"
   })
 }
+
+# ==============================================================
+# IAM Instance Profiles Configuration
+# ==============================================================
+
+resource "aws_iam_instance_profile" "profiles" {
+  for_each = var.roles
+  name     = "${local.name_prefix}-${each.key}-profile"
+  role     = aws_iam_role.roles[each.key].name
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-${each.key}-profile"
+  })
+}

@@ -29,7 +29,6 @@ variable "additional_tags" {
 variable "aws_region" {
   description = "AWS region for resource deployment"
   type        = string
-  default     = "us-east-1"
 }
 
 # ==============================================================================
@@ -88,22 +87,11 @@ variable "db_username" {
     error_message = "DB username must be between 1 and 16 characters."
   }
 }
-
-variable "db_password" {
-  description = "Master password for the database (leave empty to auto-generate)"
-  type        = string
-  sensitive   = true
-  default     = ""
-  validation {
-    condition     = var.db_password == "" || length(var.db_password) >= 8
-    error_message = "DB password must be at least 8 characters if provided."
-  }
-}
+# db_password removed to enforce AWS Secrets Manager auto-generation
 
 variable "engine" {
   description = "Database engine type"
   type        = string
-  default     = "postgres"
   validation {
     condition     = contains(["mysql", "postgres", "mariadb"], var.engine)
     error_message = "Engine must be one of: mysql, postgres, mariadb."
@@ -113,19 +101,16 @@ variable "engine" {
 variable "engine_version" {
   description = "Database engine version"
   type        = string
-  default     = "15.4"
 }
 
 variable "instance_class" {
   description = "RDS instance class"
   type        = string
-  default     = "db.t3.medium"
 }
 
 variable "allocated_storage" {
   description = "Initial allocated storage in GB"
   type        = number
-  default     = 20
   validation {
     condition     = var.allocated_storage >= 20 && var.allocated_storage <= 65536
     error_message = "Allocated storage must be between 20 and 65536 GB."
@@ -135,13 +120,12 @@ variable "allocated_storage" {
 variable "max_allocated_storage" {
   description = "Maximum allocated storage for autoscaling in GB (0 to disable)"
   type        = number
-  default     = 100
+  default     = 0
 }
 
 variable "storage_type" {
   description = "Storage type for RDS instance"
   type        = string
-  default     = "gp3"
   validation {
     condition     = contains(["gp2", "gp3", "io1", "io2", "standard"], var.storage_type)
     error_message = "Storage type must be one of: gp2, gp3, io1, io2, standard."
@@ -221,7 +205,6 @@ variable "copy_tags_to_snapshot" {
 variable "backup_retention_period" {
   description = "Backup retention period in days"
   type        = number
-  default     = 7
   validation {
     condition     = var.backup_retention_period >= 0 && var.backup_retention_period <= 35
     error_message = "Backup retention period must be between 0 and 35 days."
@@ -285,7 +268,7 @@ variable "kms_key_rotation_enabled" {
 variable "monitoring_interval" {
   description = "Enhanced monitoring interval in seconds (0 to disable)"
   type        = number
-  default     = 60
+  default     = 0
   validation {
     condition     = contains([0, 1, 5, 10, 15, 30, 60], var.monitoring_interval)
     error_message = "Monitoring interval must be 0, 1, 5, 10, 15, 30, or 60."
@@ -307,7 +290,7 @@ variable "monitoring_role_arn" {
 variable "performance_insights_enabled" {
   description = "Enable Performance Insights"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "performance_insights_retention_period" {
@@ -323,13 +306,13 @@ variable "performance_insights_retention_period" {
 variable "enabled_cloudwatch_logs_exports" {
   description = "List of log types to export to CloudWatch"
   type        = list(string)
-  default     = null
+  default     = []
 }
 
 variable "create_cloudwatch_alarms" {
   description = "Create CloudWatch alarms for RDS monitoring"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "alarm_actions" {
@@ -375,7 +358,7 @@ variable "database_connections_threshold" {
 variable "create_parameter_group" {
   description = "Create a custom parameter group"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "parameter_group_family" {

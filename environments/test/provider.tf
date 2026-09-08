@@ -4,7 +4,7 @@
 # Location: environments/test/provider.tf
 
 # ==============================================================
-# AWS Provider Configuration
+# AWS Provider Configuration (Primary Region - us-east-1)
 # ==============================================================
 provider "aws" {
   region = var.aws_region
@@ -19,7 +19,7 @@ provider "aws" {
   }
 }
 
-# ==============================================================
+#========================================================
 # Helm Provider Configuration (Linked to EKS)
 # ==============================================================
 provider "helm" {

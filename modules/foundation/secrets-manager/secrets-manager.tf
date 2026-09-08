@@ -2,6 +2,16 @@
 # AWS Secrets Manager
 # ==============================================================
 
+# 1. Generate a unique random password for each secret in the map
+resource "random_password" "passwords" {
+  for_each         = var.secrets
+
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+# 2. Create the Secret container
 resource "aws_secretsmanager_secret" "secrets" {
   for_each                = var.secrets
 
@@ -15,12 +25,16 @@ resource "aws_secretsmanager_secret" "secrets" {
   })
 }
 
+# 3. Construct and store the secure JSON payload
 resource "aws_secretsmanager_secret_version" "versions" {
   for_each      = var.secrets
 
-  # Updated from .this to .secrets to match the new resource name
   secret_id     = aws_secretsmanager_secret.secrets[each.key].id
 
-  # A best practice is to pass a JSON-encoded map here for structured secrets
-  secret_string = each.value.secret_string
+  # Dynamically construct the JSON payload using the username from variables 
+  # and the randomly generated password from the resource above
+  secret_string = jsonencode({
+    username = each.value.username
+    password = random_password.passwords[each.key].result
+  })
 }

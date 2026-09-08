@@ -1,5 +1,5 @@
 # ==============================================================
-# TEST Environment Outputs
+# TEST Environment Outputs (Single-Region: us-east-1)
 # ==============================================================
 
 output "environment" {
@@ -80,20 +80,20 @@ output "s3_bucket_arns" {
 }
 
 # ---- ECR Outputs ----
-output "test_repository_urls" {
-  description = "The ECR URLs for the test repositories"
-  value       = module.ecr_registry.repository_urls
-}
+#output "test_repository_urls" {
+#  description = "The ECR URLs for the test repositories"
+# value       = module.ecr_registry.repository_urls
+#}
 
-output "test_repository_arns" {
-  description = "The IAM ARNs for the test repositories"
-  value       = module.ecr_registry.repository_arns
-}
+#output "test_repository_arns" {
+#  description = "The IAM ARNs for the test repositories"
+# value       = module.ecr_registry.repository_arns
+#}
 
-output "test_repository_names" {
-  description = "The actual deployed names of the test repositories"
-  value       = module.ecr_registry.repository_names
-}
+#output "test_repository_names" {
+#  description = "The actual deployed names of the test repositories"
+#  value       = module.ecr_registry.repository_names
+#}
 
 # ==============================================================================
 # RDS Instance Outputs
@@ -143,39 +143,73 @@ output "db_subnet_group_id" {
 # EKS Cluster Outputs
 # ==============================================================================
 
-output "eks_cluster_name" {
-  description = "The name of the EKS cluster"
-  value       = module.eks.cluster_name
-}
+#output "eks_cluster_name" {
+#  description = "The name of the EKS cluster"
+# value       = module.eks.cluster_name
+#}
 
-output "eks_cluster_endpoint" {
-  description = "Endpoint for your Kubernetes API server"
-  value       = module.eks.cluster_endpoint
-  sensitive   = true
-}
+#output "eks_cluster_endpoint" {
+#  description = "Endpoint for your Kubernetes API server"
+#  value       = module.eks.cluster_endpoint
+# sensitive   = true
+#}
 
-output "eks_oidc_provider_arn" {
-  description = "The ARN of the OIDC Provider"
-  value       = module.eks.oidc_provider_arn
-}
+#output "eks_oidc_provider_arn" {
+#  description = "The ARN of the OIDC Provider"
+#  value       = module.eks.oidc_provider_arn
+#}
 
-output "eks_oidc_provider_url" {
-  description = "The URL of the OIDC Provider"
-  value       = module.eks.oidc_provider_url
-}
+#output "eks_oidc_provider_url" {
+#  description = "The URL of the OIDC Provider"
+# value       = module.eks.oidc_provider_url
+#}
 
 # ==============================================================================
 # AWS Load Balancer Controller Outputs
 # ==============================================================================
 
-output "lb_controller_iam_role_arn" {
-  description = "The IAM Role ARN created for the Load Balancer Controller IRSA"
-  value       = module.load_balancer_controller.lb_controller_iam_role_arn
+#output "lb_controller_iam_role_arn" {
+#  description = "The IAM Role ARN created for the Load Balancer Controller IRSA"
+# value       = module.load_balancer_controller.lb_controller_iam_role_arn
+#}
+
+#output "lb_controller_helm_status" {
+#  description = "Status of the AWS Load Balancer Controller Helm release"
+#  value       = module.load_balancer_controller.lb_controller_helm_release_status
+#}
+
+# ==============================================================================
+# Tools Infrastructure Dashboards & IPs (Single-Region: us-east-1)
+# ==============================================================================
+
+output "jenkins_dashboard_url" {
+  description = "URL to access Jenkins Dashboard"
+  value       = "http://${module.shared_access.jenkins_alb_dns}:${var.lb_port}"
 }
 
-output "lb_controller_helm_status" {
-  description = "Status of the AWS Load Balancer Controller Helm release"
-  value       = module.load_balancer_controller.lb_controller_helm_release_status
+output "nexus_dashboard_url" {
+  description = "URL to access Nexus Dashboard"
+  value       = "http://${module.shared_access.tools_alb_dns}:${var.nexus_port}"
+}
+
+output "sonarqube_dashboard_url" {
+  description = "URL to access SonarQube Dashboard"
+  value       = "http://${module.shared_access.tools_alb_dns}:${var.sonar_port}"
+}
+
+output "jenkins_private_ip" {
+  description = "Internal Private IP of Jenkins Server"
+  value       = module.jenkins.jenkins_private_ip
+}
+
+output "nexus_private_ip" {
+  description = "Internal Private IP of Nexus Server"
+  value       = module.nexus.nexus_private_ip
+}
+
+output "sonarqube_private_ip" {
+  description = "Internal Private IP of SonarQube Server"
+  value       = module.sonarqube.sonarqube_private_ip
 }
 
 # ---- Summary ----
@@ -189,9 +223,33 @@ output "infrastructure_summary" {
     private_subnets = length(module.vpc.private_subnet_ids)
     nat_gateways    = length(module.vpc.nat_gateway_ids)
     s3_bucket_count = length(module.s3.bucket_ids)
-    ecr_repo_count  = length(module.ecr_registry.repository_names)
+    #    ecr_repo_count  = length(module.ecr_registry.repository_names)
     database_ready  = true
-    eks_cluster     = module.eks.cluster_name
-    lb_controller   = module.load_balancer_controller.lb_controller_helm_release_status
+    #eks_cluster     = module.eks.cluster_name
+    #lb_controller   = module.load_balancer_controller.lb_controller_helm_release_status
+
+    # Consolidated Dashboard URLs
+    jenkins_url  = "http://${module.shared_access.jenkins_alb_dns}:${var.lb_port}"
+    nexus_url    = "http://${module.shared_access.tools_alb_dns}:${var.nexus_port}"
+    sonarqube_url = "http://${module.shared_access.tools_alb_dns}:${var.sonar_port}"
   }
+}
+
+# ==============================================================================
+# SonarQube Instance & EBS Storage Outputs
+# ==============================================================================
+
+output "sonarqube_instance_id" {
+  description = "The ID of the SonarQube EC2 instance"
+  value       = module.sonarqube.sonarqube_instance_id
+}
+
+output "sonarqube_postgres_volume_id" {
+  description = "The ID of the dedicated PostgreSQL EBS volume for SonarQube"
+  value       = module.sonarqube.postgres_volume_id
+}
+
+output "sonarqube_data_volume_id" {
+  description = "The ID of the dedicated EBS volume for SonarQube bug and project history data"
+  value       = module.sonarqube.sonarqube_data_volume_id
 }
