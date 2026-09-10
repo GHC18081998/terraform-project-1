@@ -687,3 +687,31 @@ variable "secret_recovery_window_in_days" {
   type        = number
   description = "Recovery window in days for Secrets Manager secrets"
 }
+
+# ============================================================
+# EKS Bootstrap Node Variables
+# ============================================================
+variable "eks_public_access_cidrs" {
+  description = "CIDR blocks allowed to access the EKS public API endpoint"
+  type        = list(string)
+}
+
+variable "eks_bootstrap_instance_types" {
+  description = "Instance types for the EKS bootstrap node group"
+  type        = list(string)
+}
+
+variable "eks_bootstrap_min_size" {
+  description = "Minimum size of the bootstrap node group"
+  type        = number
+}
+
+variable "eks_bootstrap_max_size" {
+  description = "Maximum size of the bootstrap node group"
+  type        = number
+}
+
+variable "eks_bootstrap_desired_size" {
+  description = "Desired size of the bootstrap node group"
+  type        = number
+}

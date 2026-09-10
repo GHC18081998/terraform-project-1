@@ -16,6 +16,10 @@ resource "helm_release" "lb_controller" {
   timeout         = var.lb_controller_helm_timeout
   cleanup_on_fail = var.lb_controller_helm_cleanup_on_fail
 
+  depends_on = [
+    aws_iam_role.lb_controller
+  ]
+
   values = [
     yamlencode({
       clusterName = var.cluster_name

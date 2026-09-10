@@ -3,14 +3,14 @@
 # ==============================================================
 # Location: environments/test/terraform.tfvars
 
-aws_region   = "us-east-1"
+aws_region   = "us-east-2"
 project_name = "myproject"
 environment  = "test"
 owner        = "aws-devops-team"
 account_id   = "390034075362"
 
 # --------------------------------------------------------------
-# EXACTLY 1 VPC (Main Region - us-east-1)
+# EXACTLY 1 VPC (Main Region - us-east-2)
 # --------------------------------------------------------------
 vpc_configs = {
   "main-vpc" = {
@@ -21,26 +21,26 @@ vpc_configs = {
 }
 
 # --------------------------------------------------------------
-# PUBLIC SUBNETS (Across 2 AZs)
+# PUBLIC SUBNETS (Update to us-east-2)
 # --------------------------------------------------------------
 public_subnet_configs = {
-  "main-pub-1a" = { vpc_key = "main-vpc", cidr_block = "10.0.1.0/24", availability_zone = "us-east-1a", map_public_ip = true }
-  "main-pub-1b" = { vpc_key = "main-vpc", cidr_block = "10.0.2.0/24", availability_zone = "us-east-1b", map_public_ip = true }
+  "main-pub-2a" = { vpc_key = "main-vpc", cidr_block = "10.0.1.0/24", availability_zone = "us-east-2a", map_public_ip = true }
+  "main-pub-2b" = { vpc_key = "main-vpc", cidr_block = "10.0.2.0/24", availability_zone = "us-east-2b", map_public_ip = true }
 }
 
 # --------------------------------------------------------------
-# PRIVATE SUBNETS (Across 2 AZs)
+# PRIVATE SUBNETS (Update to us-east-2)
 # --------------------------------------------------------------
 private_subnet_configs = {
-  "main-priv-1a" = { vpc_key = "main-vpc", cidr_block = "10.0.10.0/24", availability_zone = "us-east-1a", subnet_type = "app" }
-  "main-priv-1b" = { vpc_key = "main-vpc", cidr_block = "10.0.11.0/24", availability_zone = "us-east-1b", subnet_type = "app" }
+  "main-priv-2a" = { vpc_key = "main-vpc", cidr_block = "10.0.10.0/24", availability_zone = "us-east-2a", subnet_type = "app" }
+  "main-priv-2b" = { vpc_key = "main-vpc", cidr_block = "10.0.11.0/24", availability_zone = "us-east-2b", subnet_type = "app" }
 }
 
 # --------------------------------------------------------------
 # EXACTLY 1 NAT GATEWAY
 # --------------------------------------------------------------
 nat_gateway_configs = {
-  "main-nat" = { public_subnet_key = "main-pub-1a" }
+  "main-nat" = { public_subnet_key = "main-pub-2a" }
 }
 
 # --------------------------------------------------------------
@@ -50,7 +50,7 @@ public_route_table_configs = {
   "main-pub-rt" = {
     vpc_key                   = "main-vpc"
     igw_key                   = "main-vpc"
-    associated_public_subnets = ["main-pub-1a", "main-pub-1b"]
+    associated_public_subnets = ["main-pub-2a", "main-pub-2b"]
   }
 }
 
@@ -58,7 +58,7 @@ private_route_table_configs = {
   "main-priv-rt" = {
     vpc_key                    = "main-vpc"
     nat_gateway_key            = "main-nat"
-    associated_private_subnets = ["main-priv-1a", "main-priv-1b"]
+    associated_private_subnets = ["main-priv-2a", "main-priv-2b"]
   }
 }
 
@@ -85,21 +85,33 @@ kms_key_administrators = [
 # Karpenter NodePools configuration
 node_pools = {
   general = {
-    instance_families    = ["m5", "m6i", "c6i"]
-    instance_sizes       = ["large", "xlarge"]
+    instance_families    = ["t3"]
+    instance_sizes       = ["medium"]
     capacity_types       = ["spot", "on-demand"]
     arch                 = ["amd64"]
     ami_family           = "AL2023"
     min_cpu              = "2"
-    max_cpu              = "100"
+    max_cpu              = "2"
     min_memory           = "4Gi"
-    max_memory           = "400Gi"
+    max_memory           = "4Gi"
+    root_volume_size     = 50        # Size in GB (e.g., 50GB)
+    root_volume_type     = "gp3"     # General Purpose SSD
+    root_volume_encrypted = true     # Recommended for enterprise security
     labels               = { "workload-type" = "general" }
     taints               = []
     consolidation_policy = "WhenUnderutilized"
     expire_after         = "720h"
   }
 }
+
+# --------------------------------------------------------------
+# EKS Bootstrap Node Configuration
+# --------------------------------------------------------------
+eks_public_access_cidrs      = ["0.0.0.0/0"]
+eks_bootstrap_instance_types = ["t3.micro"]
+eks_bootstrap_min_size       = 1 
+eks_bootstrap_max_size       = 3
+eks_bootstrap_desired_size   = 1
 
 # --------------------------------------------------------------
 # EKS Cluster Authentication
@@ -117,7 +129,7 @@ aws_auth_users = []
 # S3 Buckets Configuration
 # --------------------------------------------------------------
 s3_buckets = {
-  "myproject-terraform-state-locking-bucket" = {
+  "tf-state-lock" = {
     versioning_enabled = true
   }
   "app-logs" = {
@@ -137,13 +149,7 @@ s3_buckets = {
 # --------------------------------------------------------------
 # Secrets Manager Configuration
 # --------------------------------------------------------------
-#secrets = {
-#  "sonarqube-db-credentials" = {
-#    description = "SonarQube PostgreSQL credentials"
-#    username    = "sonaradmin"
-#  }
-#}
-
+secrets = {}
 # --------------------------------------------------------------
 # IAM Roles & Custom Policies
 # --------------------------------------------------------------
@@ -440,9 +446,11 @@ kms_key_arn = ""
 # ==============================================================
 # AWS Load Balancer Controller Configuration
 # ==============================================================
-enable_aws_load_balancer_controller = true
+enable_aws_load_balancer_controller = false
 lb_controller_replica_count         = 1
 lb_controller_chart_version         = "1.7.1"
+lb_controller_helm_timeout          = 1200
+lb_controller_helm_wait    	    = true
 enable_waf                          = false
 enable_wafv2                        = false
 enable_shield                       = false
@@ -481,7 +489,7 @@ sonarqube_version          = "lts-community"
 sonarqube_java_version     = "java-17-amazon-corretto-devel"
 sonarqube_postgres_version = "15"
 
-sonarqube_docker_image     = "sonarqube:lts-community"
+sonarqube_docker_image     = "sonarqube:26.4.0-community"
 sonar_host_port            = 9000
 sonar_container_port       = 9000
 sonar_container_name       = "sonar"

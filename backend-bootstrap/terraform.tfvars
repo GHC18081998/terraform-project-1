@@ -1,7 +1,7 @@
 # ==============================================================
 # Global Configuration
 # ==============================================================
-aws_region   = "us-east-1"
+aws_region   = "us-east-2"
 project_name = "myproject"
 environment  = "bootstrap"
 owner        = "aws-devops-team"

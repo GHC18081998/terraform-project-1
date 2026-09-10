@@ -4,7 +4,7 @@
 # Location: environments/test/provider.tf
 
 # ==============================================================
-# AWS Provider Configuration (Primary Region - us-east-1)
+# AWS Provider Configuration (Single Region via Variables)
 # ==============================================================
 provider "aws" {
   region = var.aws_region
@@ -19,7 +19,7 @@ provider "aws" {
   }
 }
 
-#========================================================
+# ==============================================================
 # Helm Provider Configuration (Linked to EKS)
 # ==============================================================
 provider "helm" {
@@ -28,7 +28,8 @@ provider "helm" {
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      # Dynamically uses the region from terraform.tfvars
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
       command     = "aws"
     }
   }
@@ -43,7 +44,8 @@ provider "kubectl" {
   load_config_file       = false
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    # Dynamically uses the region from terraform.tfvars
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
     command     = "aws"
   }
 }
